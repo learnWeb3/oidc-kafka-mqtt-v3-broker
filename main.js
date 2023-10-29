@@ -11,11 +11,13 @@ const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
 
 const isProd = process.env.NODE_ENV === "production";
-if (isProd) {
+if (!isProd) {
     dotenv.config({
         path: join(process.cwd(), ".env.development"),
     });
 }
+
+// console.log(process.env)
 
 async function main() {
     /** CONFIG */
@@ -23,7 +25,7 @@ async function main() {
     const configSchemaPath = join(process.cwd(), "config", "config.schema.json");
     const config = await processConfig(configPath, configSchemaPath);
 
-    console.log(JSON.stringify(config, null, 4));
+    // console.log(JSON.stringify(config, null, 4));
 
     /** PERSISTENCE + MQ EMITTER */
     const mq = require("mqemitter-mongodb")({
