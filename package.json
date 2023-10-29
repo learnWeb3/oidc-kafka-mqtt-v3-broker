@@ -1,0 +1,24 @@
+{
+  "name": "mqtt-broker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aedes": "^0.50.0",
+    "aedes-persistence-mongodb": "^9.1.1",
+    "dotenv": "^16.3.1",
+    "jsonschema": "^1.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
+    "mqemitter-mongodb": "^8.1.0",
+    "nanoid": "^3.3.4",
+    "websocket-stream": "^5.5.2",
+    "yaml": "^2.3.3"
+  }
+}

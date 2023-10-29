@@ -1,0 +1,68 @@
+{
+  "type": "object",
+  "required": ["config"],
+  "properties": {
+    "config": {
+      "required": ["openid", "roles"],
+      "type": "object",
+      "properties": {
+        "openid": {
+          "type": "object",
+          "required": [
+            "connect_url",
+            "client_id",
+            "client_secret",
+            "subject_key",
+            "roles_key"
+          ],
+          "properties": {
+            "connect_url": {
+              "type": "string"
+            },
+            "client_id": {
+              "type": "string"
+            },
+            "client_secret": {
+              "type": "string"
+            },
+            "subject_key": {
+              "type": "string"
+            },
+            "roles_key": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "roles": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "authorize_publish", "authorize_subscribe"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "authorize_publish": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "authorize_subscribe": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

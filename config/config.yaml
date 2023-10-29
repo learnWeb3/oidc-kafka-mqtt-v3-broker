@@ -1,0 +1,21 @@
+config:
+  openid:
+    connect_url: "https://login.students-epitech.ovh/realms/andrew/protocol/openid-connect/certs"
+    client_id: "andrew-app"
+    client_secret: ""
+    subject_key: sub
+    roles_key: roles
+  roles:
+    - name: device
+      authorize_publish:
+        - andrew/devices/*
+      authorize_subscribe:
+        - andrew/devices/*
+    - name: device-manager
+      authorize_publish: []
+      authorize_subscribe:
+        - andrew/devices/*
+    - name: api
+      authorize_publish:
+        - andrew/devices/*
+      authorize_subscribe: []
