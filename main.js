@@ -56,6 +56,7 @@ async function main() {
     }
 
     aedes.authenticate = (client, username, password, callback) => {
+        const options = {}
         if (username === "oauth2") {
             return jwt.verify(
                 password.toString(),
@@ -66,6 +67,7 @@ async function main() {
                         return callback(err, false);
                     }
                     client.token = decoded;
+                    console.log(`new authenticated client ${client.id}`)
                     return callback(null, true);
                 }
             );
@@ -79,10 +81,10 @@ async function main() {
             map[role] = true;
             return map;
         }, {});
-        for (const { name, authorizePublish } of roles) {
+        for (const { name, authorize_publish } of roles) {
             if (clientRolesMapping[name]) {
                 if (clientRolesMapping[name]) {
-                    for (const authorizedTopicPattern of authorizePublish) {
+                    for (const authorizedTopicPattern of authorize_publish) {
                         const check = isAuthorizedMQTTTopic(authorizedTopicPattern, topic);
                         if (check) {
                             return;
@@ -91,7 +93,7 @@ async function main() {
                 }
             }
         }
-        throw new Error("Insufficient to permissions to publish message");
+        throw new Error("Insufficient permissions to publish message");
     }
 
     function validateSubscribeAuthorization(topic, rolesKey, client, roles) {
@@ -100,9 +102,9 @@ async function main() {
             map[role] = true;
             return map;
         }, {});
-        for (const { name, authorizeSubscribe } of roles) {
+        for (const { name, authorize_subscribe } of roles) {
             if (clientRolesMapping[name]) {
-                for (const authorizedTopicPattern of authorizeSubscribe) {
+                for (const authorizedTopicPattern of authorize_subscribe) {
                     const check = isAuthorizedMQTTTopic(authorizedTopicPattern, topic);
                     if (check) {
                         return;
@@ -110,7 +112,7 @@ async function main() {
                 }
             }
         }
-        throw new Error("Insufficient to permissions to subscribe");
+        throw new Error("Insufficient permissions to subscribe");
     }
 
     aedes.authorizePublish = (client, packet, callback) => {
@@ -123,8 +125,10 @@ async function main() {
                     client,
                     config.config.roles
                 );
+                console.log(`client ${client.id} published new message to topic ${topic}`)
                 return callback(null);
             } catch (error) {
+                console.log(error)
                 return callback(error);
             }
         }
@@ -134,6 +138,7 @@ async function main() {
 
     aedes.authorizeSubscribe = (client, subscription, callback) => {
         const topic = subscription.topic;
+        console.log(subscription)
         if (client.token instanceof Object) {
             try {
                 validateSubscribeAuthorization(
@@ -142,6 +147,7 @@ async function main() {
                     client,
                     config.config.roles
                 );
+                console.log(`client ${client.id} subscribed to topic ${topic}`)
                 return callback(null, subscription);
             } catch (error) {
                 return callback(error);
