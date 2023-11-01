@@ -76,24 +76,28 @@ async function main() {
     };
 
     function validatePublishAuthorization(topic, rolesKey, client, roles) {
-        const clientRoles = client.token[rolesKey];
-        const clientRolesMapping = clientRoles.reduce((map, role) => {
-            map[role] = true;
-            return map;
-        }, {});
-        for (const { name, authorize_publish } of roles) {
-            if (clientRolesMapping[name]) {
+        const clientRoles = client.token[rolesKey] || null
+        if (clientRoles) {
+            const clientRolesMapping = clientRoles.reduce((map, role) => {
+                map[role] = true;
+                return map;
+            }, {});
+            for (const { name, authorize_publish } of roles) {
                 if (clientRolesMapping[name]) {
-                    for (const authorizedTopicPattern of authorize_publish) {
-                        const check = isAuthorizedMQTTTopic(authorizedTopicPattern, topic);
-                        if (check) {
-                            return;
+                    if (clientRolesMapping[name]) {
+                        for (const authorizedTopicPattern of authorize_publish) {
+                            const check = isAuthorizedMQTTTopic(authorizedTopicPattern, topic);
+                            if (check) {
+                                return;
+                            }
                         }
                     }
                 }
             }
+            throw new Error("Insufficient permissions to publish message");
+        } else {
+            throw new Error(`Can't parse roles key, [HINT] roles must be a list evaluated from the ${rolesKey} claim of the access token, this key can be configured in the config.yaml file of the broker.`);
         }
-        throw new Error("Insufficient permissions to publish message");
     }
 
     function validateSubscribeAuthorization(topic, rolesKey, client, roles) {
@@ -128,7 +132,7 @@ async function main() {
                 console.log(`client ${client.id} published new message to topic ${topic}`)
                 return callback(null);
             } catch (error) {
-                console.log(error)
+                console.log(error.message)
                 return callback(error);
             }
         }
@@ -150,6 +154,7 @@ async function main() {
                 console.log(`client ${client.id} subscribed to topic ${topic}`)
                 return callback(null, subscription);
             } catch (error) {
+                console.log(error.message)
                 return callback(error);
             }
         }
