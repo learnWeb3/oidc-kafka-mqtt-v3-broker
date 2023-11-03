@@ -3,7 +3,6 @@ const ws = require("websocket-stream");
 const Aedes = require("aedes");
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
-const dotenv = require("dotenv");
 const { join } = require("path");
 const { processConfig } = require("./lib/validate-config-schema");
 const { nanoid } = require("nanoid");
@@ -12,6 +11,7 @@ const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
+    const dotenv = require("dotenv");
     dotenv.config({
         path: join(process.cwd(), ".env.development"),
     });

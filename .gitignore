@@ -43,3 +43,5 @@ mongo_scripts
 # env files
 .env.*
 .env
+
+k8s

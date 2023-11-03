@@ -8,14 +8,14 @@ config:
   roles:
     - name: device
       authorize_publish:
-        - andrew/devices/#
+        - source/andrew-device/vehicles/+/devices/+/cmd/+
       authorize_subscribe:
-        - andrew/devices/#
+        - source/andrew-device/vehicles/+/devices/+/cmd/+
     - name: device-manager
       authorize_publish: []
       authorize_subscribe:
-        - andrew/devices/#
+        - source/andrew-device/vehicles/+/devices/+/cmd/+
     - name: api
       authorize_publish:
-        - andrew/devices/#
+        - source/andrew-device/vehicles/+/devices/+/cmd/+
       authorize_subscribe: []
