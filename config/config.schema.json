@@ -3,7 +3,7 @@
   "required": ["config"],
   "properties": {
     "config": {
-      "required": ["openid", "roles"],
+      "required": ["openid", "roles", "internal_users"],
       "type": "object",
       "properties": {
         "openid": {
@@ -32,32 +32,42 @@
               "type": "string"
             }
           }
-        }
-      },
-      "roles": {
-        "type": "object",
-        "properties": {
-          "config": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["name", "authorize_publish", "authorize_subscribe"],
-              "properties": {
-                "name": {
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "authorize_publish", "authorize_subscribe"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authorize_publish": {
+                "type": "array",
+                "items": {
                   "type": "string"
-                },
-                "authorize_publish": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "authorize_subscribe": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
                 }
+              },
+              "authorize_subscribe": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "internal_users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["username", "password"],
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
               }
             }
           }

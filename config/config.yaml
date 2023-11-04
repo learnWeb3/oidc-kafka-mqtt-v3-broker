@@ -5,6 +5,10 @@ config:
     client_secret: ""
     subject_key: sub
     roles_key: roles
+  internal_users: 
+    - username: kafka-connect
+      # test
+      password: "$2b$10$aONHj.IkHgigW/Oum/LYPOy1yXxQobwznT.Ty3jN3tH6/vrqJF/9W"
   roles:
     - name: device
       authorize_publish:

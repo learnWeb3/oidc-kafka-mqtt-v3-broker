@@ -8,6 +8,7 @@ const { processConfig } = require("./lib/validate-config-schema");
 const { nanoid } = require("nanoid");
 const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
+const bcrypt = require('bcrypt')
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
@@ -71,8 +72,19 @@ async function main() {
                     return callback(null, true);
                 }
             );
+        } else {
+            const internalUsers = config.config.internal_users
+            const userMatch = internalUsers.find(({ username }) => username === username) || null
+            if (!userMatch) {
+                return callback(null, false)
+            }
+            bcrypt.compare(password, userMatch.password).then(function (check) {
+                if (check) {
+                    return callback(null, true);
+                }
+                return callback(null, false);
+            });
         }
-        return callback(null, false);
     };
 
     function validatePublishAuthorization(topic, rolesKey, client, roles) {
