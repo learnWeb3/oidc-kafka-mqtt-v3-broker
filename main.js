@@ -32,6 +32,10 @@ async function main() {
     const mq = require("mqemitter-mongodb")({
         url: process.env.MONGO_URL,
     });
+
+    // ammend the persistence plugin to handle group subsscription 
+    // and emit the underlying mqtemitter publish event
+    // in a round robin fashion
     const persistence = require("aedes-persistence-mongodb")({
         url: process.env.MONGO_URL,
     });
@@ -43,6 +47,7 @@ async function main() {
         mq,
         persistence,
     });
+
     const port = process.env.WEBSOCKET_PORT || 8888;
 
     /** JWKS CLIENT */

@@ -12,14 +12,14 @@ config:
   roles:
     - name: device
       authorize_publish:
-        - source/andrew-device/vehicles/+/devices/+/cmd/+
+        - $share/backend/vehicles/+/devices/+/cmd
       authorize_subscribe:
-        - source/andrew-device/vehicles/+/devices/+/cmd/+
+        - vehicles/+/devices/+/cmd
     - name: device-manager
       authorize_publish: []
       authorize_subscribe:
-        - source/andrew-device/vehicles/+/devices/+/cmd/+
+        - $share/backend/vehicles/+/devices/+/cmd
     - name: api
       authorize_publish:
-        - source/andrew-device/vehicles/+/devices/+/cmd/+
+        - vehicles/+/devices/+/cmd
       authorize_subscribe: []
