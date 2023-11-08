@@ -3,7 +3,7 @@
   "required": ["config"],
   "properties": {
     "config": {
-      "required": ["openid", "roles", "internal_users"],
+      "required": ["openid", "acl", "internal_users", "kafka"],
       "type": "object",
       "properties": {
         "openid": {
@@ -33,7 +33,7 @@
             }
           }
         },
-        "roles": {
+        "acl": {
           "type": "array",
           "items": {
             "type": "object",
@@ -52,6 +52,51 @@
                 "type": "array",
                 "items": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "kafka": {
+          "type": "object",
+          "required": ["publish"],
+          "properties": {
+            "publish": {
+              "type": "object",
+              "required": [
+                "connect_events",
+                "disconnect_events",
+                "client_events"
+              ],
+              "properties": {
+                "connect_event": {
+                  "type": "object",
+                  "required": ["topic"],
+                  "topic": {
+                    "type": "string"
+                  }
+                },
+                "disconnect_event": {
+                  "type": "object",
+                  "required": ["topic"],
+                  "topic": {
+                    "type": "string"
+                  }
+                },
+                "client_events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["mqtt_topic", "topic"],
+                    "properties": {
+                      "mqtt_topic": {
+                        "type": "string"
+                      },
+                      "topic": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               }
             }

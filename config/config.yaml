@@ -5,21 +5,19 @@ config:
     client_secret: ""
     subject_key: sub
     roles_key: roles
-  internal_users: 
-    - username: kafka-connect
-      # test
-      password: "$2b$10$aONHj.IkHgigW/Oum/LYPOy1yXxQobwznT.Ty3jN3tH6/vrqJF/9W"
-  roles:
+  internal_users: []
+  acl:
     - name: device
       authorize_publish:
-        - $share/backend/vehicles/+/devices/+/cmd
+        - source/andrew-device/vehicles/+/devices/+/cmd/+
       authorize_subscribe:
-        - vehicles/+/devices/+/cmd
-    - name: device-manager
-      authorize_publish: []
-      authorize_subscribe:
-        - $share/backend/vehicles/+/devices/+/cmd
-    - name: api
-      authorize_publish:
-        - vehicles/+/devices/+/cmd
-      authorize_subscribe: []
+        - source/andrew-device/vehicles/+/devices/+/cmd/+
+  kafka:
+    publish:
+      connect_event:
+        topic: andrew.devices.events
+      disconnect_event:
+        topic: andrew.devices.events
+      client_events:
+        - mqtt_topic: source/andrew-device/vehicles/+/devices/+/cmd/+
+          topic: andrew.devices.events

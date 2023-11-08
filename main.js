@@ -1,6 +1,7 @@
 const http = require("http");
 const ws = require("websocket-stream");
 const Aedes = require("aedes");
+const { Kafka } = require('kafkajs')
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 const { join } = require("path");
@@ -8,7 +9,8 @@ const { processConfig } = require("./lib/validate-config-schema");
 const { nanoid } = require("nanoid");
 const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
-const bcrypt = require('bcrypt')
+const bcrypt = require("bcrypt");
+const { v4: uuid } = require('uuid')
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
@@ -26,6 +28,18 @@ async function main() {
     const configSchemaPath = join(process.cwd(), "config", "config.schema.json");
     const config = await processConfig(configPath, configSchemaPath);
 
+    /** KAFKA */
+    const kafka = new Kafka({
+        clientId: process.env.NODE_ENV === "production" ? hostname() : uuid(),
+        brokers: process.env.KAFKA_BROKERS.split(','),
+        sasl: {
+            username: process.env.KAFKA_SASL_USERNAME,
+            password: process.env.KAFKA_SASL_PASSWORD,
+        }
+    })
+    const producer = kafka.producer()
+    await producer.connect()
+
     // console.log(JSON.stringify(config, null, 4));
 
     /** PERSISTENCE + MQ EMITTER */
@@ -33,9 +47,6 @@ async function main() {
         url: process.env.MONGO_URL,
     });
 
-    // ammend the persistence plugin to handle group subsscription 
-    // and emit the underlying mqtemitter publish event
-    // in a round robin fashion
     const persistence = require("aedes-persistence-mongodb")({
         url: process.env.MONGO_URL,
     });
@@ -61,8 +72,68 @@ async function main() {
         });
     }
 
+    aedes.on("publish", (packet, client) => {
+        if (client.token instanceof Object) {
+            const clientId = client.id
+            const { topic: packetTopic, payload } = packet;
+            const kafkaTopic =
+                config.config.kafka.publish.client_events.find(
+                    ({ mqtt_topic, topic }) => mqtt_topic === packetTopic && topic
+                )?.topic || null;
+            if (kafkaTopic) {
+                // send payload to kafka
+                console.log('data', clientId, payload)
+                // await producer.send({
+                //     topic: 'topic-name',
+                //     messages: [
+                //         { key: 'key1', value: 'hello world' },
+                //         { key: 'key2', value: 'hey hey!' }
+                //     ],
+                // })
+            }
+        }
+    });
+
+    aedes.on("clientReady", (client) => {
+        if (client.token instanceof Object) {
+            const clientId = client.id
+            const kafkaTopic =
+                config.config.kafka.publish.connect_event?.topic || null;
+            if (kafkaTopic) {
+                // send payload to kafka
+                console.log('connect', clientId)
+                // await producer.send({
+                //     topic: 'topic-name',
+                //     messages: [
+                //         { key: 'key1', value: 'hello world' },
+                //         { key: 'key2', value: 'hey hey!' }
+                //     ],
+                // })
+            }
+        }
+    });
+
+    aedes.on("clientDisconnect", (client) => {
+        if (client.token instanceof Object) {
+            const clientId = client.id
+            const kafkaTopic =
+                config.config.kafka.publish.disconnect_event?.topic || null;
+            if (kafkaTopic) {
+                // send payload to kafka
+                console.log('disconnect', clientId)
+                // await producer.send({
+                //     topic: 'topic-name',
+                //     messages: [
+                //         { key: 'key1', value: 'hello world' },
+                //         { key: 'key2', value: 'hey hey!' }
+                //     ],
+                // })
+            }
+        }
+    });
+
     aedes.authenticate = (client, username, password, callback) => {
-        const options = {}
+        const options = {};
         if (username === "oauth2") {
             return jwt.verify(
                 password.toString(),
@@ -73,15 +144,16 @@ async function main() {
                         return callback(err, false);
                     }
                     client.token = decoded;
-                    console.log(`new authenticated client ${client.id}`)
+                    console.log(`new authenticated client ${client.id}`);
                     return callback(null, true);
                 }
             );
         } else {
-            const internalUsers = config.config.internal_users
-            const userMatch = internalUsers.find(({ username }) => username === username) || null
+            const internalUsers = config.config.internal_users;
+            const userMatch =
+                internalUsers.find(({ username }) => username === username) || null;
             if (!userMatch) {
-                return callback(null, false)
+                return callback(null, false);
             }
             bcrypt.compare(password, userMatch.password).then(function (check) {
                 if (check) {
@@ -93,7 +165,7 @@ async function main() {
     };
 
     function validatePublishAuthorization(topic, rolesKey, client, roles) {
-        const clientRoles = client.token[rolesKey] || null
+        const clientRoles = client.token[rolesKey] || null;
         if (clientRoles) {
             const clientRolesMapping = clientRoles.reduce((map, role) => {
                 map[role] = true;
@@ -103,7 +175,10 @@ async function main() {
                 if (clientRolesMapping[name]) {
                     if (clientRolesMapping[name]) {
                         for (const authorizedTopicPattern of authorize_publish) {
-                            const check = isAuthorizedMQTTTopic(authorizedTopicPattern, topic);
+                            const check = isAuthorizedMQTTTopic(
+                                authorizedTopicPattern,
+                                topic
+                            );
                             if (check) {
                                 return;
                             }
@@ -113,7 +188,9 @@ async function main() {
             }
             throw new Error("Insufficient permissions to publish message");
         } else {
-            throw new Error(`Can't parse roles key, [HINT] roles must be a list evaluated from the ${rolesKey} claim of the access token, this key can be configured in the config.yaml file of the broker.`);
+            throw new Error(
+                `Can't parse roles key, [HINT] roles must be a list evaluated from the ${rolesKey} claim of the access token, this key can be configured in the config.yaml file of the broker.`
+            );
         }
     }
 
@@ -146,10 +223,12 @@ async function main() {
                     client,
                     config.config.roles
                 );
-                console.log(`client ${client.id} published new message to topic ${topic}`)
+                console.log(
+                    `client ${client.id} published new message to topic ${topic}`
+                );
                 return callback(null);
             } catch (error) {
-                console.log(error.message)
+                console.log(error.message);
                 return callback(error);
             }
         }
@@ -159,7 +238,7 @@ async function main() {
 
     aedes.authorizeSubscribe = (client, subscription, callback) => {
         const topic = subscription.topic;
-        console.log(subscription)
+        console.log(subscription);
         if (client.token instanceof Object) {
             try {
                 validateSubscribeAuthorization(
@@ -168,10 +247,10 @@ async function main() {
                     client,
                     config.config.roles
                 );
-                console.log(`client ${client.id} subscribed to topic ${topic}`)
+                console.log(`client ${client.id} subscribed to topic ${topic}`);
                 return callback(null, subscription);
             } catch (error) {
-                console.log(error.message)
+                console.log(error.message);
                 return callback(error);
             }
         }
