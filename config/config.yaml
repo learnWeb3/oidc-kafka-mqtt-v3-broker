@@ -11,7 +11,7 @@ config:
       authorize_publish:
         - source/andrew-device/vehicles/+/devices/+/cmd/+
       authorize_subscribe:
-        - source/andrew-device/vehicles/+/devices/+/cmd/+
+        - source/andrew-api/vehicles/+/devices/+/cmd/+
   kafka:
     publish:
       connect_event:

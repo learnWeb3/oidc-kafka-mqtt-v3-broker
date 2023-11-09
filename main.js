@@ -10,7 +10,8 @@ const { nanoid } = require("nanoid");
 const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
 const bcrypt = require("bcrypt");
-const { v4: uuid } = require('uuid')
+const { v4: uuid } = require('uuid');
+const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent, AndrewDeviceMetricEvent } = require('andrew-events-schema/andrew-device-events');
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
@@ -33,12 +34,15 @@ async function main() {
         clientId: process.env.NODE_ENV === "production" ? hostname() : uuid(),
         brokers: process.env.KAFKA_BROKERS.split(','),
         sasl: {
+            mechanism: 'scram-sha-512',
             username: process.env.KAFKA_SASL_USERNAME,
             password: process.env.KAFKA_SASL_PASSWORD,
         }
     })
     const producer = kafka.producer()
     await producer.connect()
+        .then(() => console.log(`kafka producer connected successfully`))
+        .catch((error) => console.log(error))
 
     // console.log(JSON.stringify(config, null, 4));
 
@@ -54,7 +58,7 @@ async function main() {
     /** HTTP SERVER AND MQTT BROKER */
     const httpServer = http.createServer();
     const aedes = new Aedes({
-        id: "BROKER_" + isProd ? hostname() : nanoid(),
+        id: isProd ? hostname() : nanoid(),
         mq,
         persistence,
     });
@@ -72,62 +76,74 @@ async function main() {
         });
     }
 
-    aedes.on("publish", (packet, client) => {
-        if (client.token instanceof Object) {
-            const clientId = client.id
-            const { topic: packetTopic, payload } = packet;
-            const kafkaTopic =
-                config.config.kafka.publish.client_events.find(
-                    ({ mqtt_topic, topic }) => mqtt_topic === packetTopic && topic
-                )?.topic || null;
-            if (kafkaTopic) {
-                // send payload to kafka
-                console.log('data', clientId, payload)
-                // await producer.send({
-                //     topic: 'topic-name',
-                //     messages: [
-                //         { key: 'key1', value: 'hello world' },
-                //         { key: 'key2', value: 'hey hey!' }
-                //     ],
-                // })
-            }
-        }
-    });
-
     aedes.on("clientReady", (client) => {
-        if (client.token instanceof Object) {
+        if (client?.token instanceof Object) {
             const clientId = client.id
             const kafkaTopic =
                 config.config.kafka.publish.connect_event?.topic || null;
             if (kafkaTopic) {
                 // send payload to kafka
-                console.log('connect', clientId)
-                // await producer.send({
-                //     topic: 'topic-name',
-                //     messages: [
-                //         { key: 'key1', value: 'hello world' },
-                //         { key: 'key2', value: 'hey hey!' }
-                //     ],
-                // })
+                console.log('/////////////=======> connect', clientId)
+                const connectEvent = new AndrewDeviceConnectEvent(clientId, {
+                    device: clientId,
+                })
+                console.log(JSON.stringify(connectEvent, null, 4))
+                producer.send({
+                    topic: kafkaTopic,
+                    messages: [
+                        { key: clientId, value: JSON.stringify(connectEvent) }
+                    ],
+                })
             }
         }
     });
 
     aedes.on("clientDisconnect", (client) => {
-        if (client.token instanceof Object) {
+        if (client?.token instanceof Object) {
             const clientId = client.id
             const kafkaTopic =
                 config.config.kafka.publish.disconnect_event?.topic || null;
             if (kafkaTopic) {
                 // send payload to kafka
-                console.log('disconnect', clientId)
-                // await producer.send({
-                //     topic: 'topic-name',
-                //     messages: [
-                //         { key: 'key1', value: 'hello world' },
-                //         { key: 'key2', value: 'hey hey!' }
-                //     ],
-                // })
+                console.log('/////////////=======> disconnect', clientId)
+                const disconnectEvent = new AndrewDeviceDisconnectEvent(clientId, {
+                    device: clientId
+                })
+                console.log(JSON.stringify(disconnectEvent, null, 4))
+                producer.send({
+                    topic: kafkaTopic,
+                    messages: [
+                        { key: clientId, value: JSON.stringify(disconnectEvent) }
+                    ],
+                })
+            }
+        }
+    });
+
+    aedes.on("publish", (packet, client) => {
+        if (client?.token instanceof Object) {
+            const clientId = client.id
+            const { topic: packetTopic, payload } = packet;
+            const kafkaTopic =
+                config.config.kafka.publish.client_events.find(
+                    ({ mqtt_topic }) => isAuthorizedMQTTTopic(mqtt_topic, packetTopic)
+                )?.topic || null;
+            if (kafkaTopic) {
+                // send payload to kafka
+                console.log('/////////////=======> data', clientId, payload)
+                const data = JSON.parse(Buffer.from(payload).toString())
+                const metricEvent = new AndrewDeviceMetricEvent(clientId, {
+                    vehicle: data.vehicle,
+                    device: data.device,
+                    testMetric: 'test'
+                })
+                console.log(JSON.stringify(metricEvent, null, 4))
+                producer.send({
+                    topic: kafkaTopic,
+                    messages: [
+                        { key: clientId, value: JSON.stringify(metricEvent) }
+                    ],
+                })
             }
         }
     });
@@ -221,7 +237,7 @@ async function main() {
                     topic,
                     config.config.openid.roles_key,
                     client,
-                    config.config.roles
+                    config.config.acl
                 );
                 console.log(
                     `client ${client.id} published new message to topic ${topic}`
@@ -238,14 +254,14 @@ async function main() {
 
     aedes.authorizeSubscribe = (client, subscription, callback) => {
         const topic = subscription.topic;
-        console.log(subscription);
+        // console.log(subscription);
         if (client.token instanceof Object) {
             try {
                 validateSubscribeAuthorization(
                     topic,
                     config.config.openid.roles_key,
                     client,
-                    config.config.roles
+                    config.config.acl
                 );
                 console.log(`client ${client.id} subscribed to topic ${topic}`);
                 return callback(null, subscription);

@@ -64,8 +64,8 @@
             "publish": {
               "type": "object",
               "required": [
-                "connect_events",
-                "disconnect_events",
+                "connect_event",
+                "disconnect_event",
                 "client_events"
               ],
               "properties": {

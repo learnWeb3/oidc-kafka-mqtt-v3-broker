@@ -1,12 +1,18 @@
 FROM node:18.0.0-alpine As production
 
+USER root
+
 WORKDIR /usr/share/app/
 
 RUN apk update && apk add --no-cache tini 
 
-COPY ./package*.json .
+RUN apk add --no-cache openssh-client git
+RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+RUN --mount=type=ssh
 
-RUN npm install --loglevel verbose
+COPY package.json ./
+
+RUN --mount=type=ssh npm install --verbose
 
 COPY . .
 
