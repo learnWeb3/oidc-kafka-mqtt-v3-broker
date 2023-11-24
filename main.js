@@ -11,7 +11,7 @@ const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
 const bcrypt = require("bcrypt");
 const { v4: uuid } = require('uuid');
-const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent, AndrewDeviceMetricEvent } = require('andrew-events-schema/andrew-device-events');
+const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent, AndrewDeviceEvent } = require('andrew-events-schema/andrew-device-events');
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
@@ -122,26 +122,21 @@ async function main() {
 
     aedes.on("publish", (packet, client) => {
         if (client?.token instanceof Object) {
-            const clientId = client.id
             const { topic: packetTopic, payload } = packet;
             const kafkaTopic =
                 config.config.kafka.publish.client_events.find(
                     ({ mqtt_topic }) => isAuthorizedMQTTTopic(mqtt_topic, packetTopic)
                 )?.topic || null;
             if (kafkaTopic) {
-                // send payload to kafka
-                console.log('/////////////=======> data', clientId, payload)
                 const data = JSON.parse(Buffer.from(payload).toString())
-                const metricEvent = new AndrewDeviceMetricEvent(clientId, {
-                    vehicle: data.vehicle,
-                    device: data.device,
-                    testMetric: 'test'
-                })
+                // send payload to kafka
+                console.log('/////////////=======> data', data)
+                const metricEvent = new AndrewDeviceEvent(data.type, data.subject, data)
                 console.log(JSON.stringify(metricEvent, null, 4))
                 producer.send({
                     topic: kafkaTopic,
                     messages: [
-                        { key: clientId, value: JSON.stringify(metricEvent) }
+                        { key: data.subject, value: JSON.stringify(metricEvent) }
                     ],
                 })
             }
@@ -165,13 +160,16 @@ async function main() {
                 }
             );
         } else {
+            // console.log(username, password.toString())
             const internalUsers = config.config.internal_users;
             const userMatch =
                 internalUsers.find(({ username }) => username === username) || null;
+            // console.log(userMatch)
             if (!userMatch) {
                 return callback(null, false);
             }
-            bcrypt.compare(password, userMatch.password).then(function (check) {
+            bcrypt.compare(password.toString(), userMatch.password).then(function (check) {
+                console.log(check)
                 if (check) {
                     return callback(null, true);
                 }
