@@ -11,7 +11,7 @@ const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
 const bcrypt = require("bcrypt");
 const { v4: uuid } = require('uuid');
-const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent, AndrewDeviceEvent } = require('andrew-events-schema/andrew-device-events');
+const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent, AndrewDeviceEvent } = require('andrew-events-schema');
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
@@ -20,8 +20,6 @@ if (!isProd) {
         path: join(process.cwd(), ".env.development"),
     });
 }
-
-// console.log(process.env)
 
 async function main() {
     /** CONFIG */

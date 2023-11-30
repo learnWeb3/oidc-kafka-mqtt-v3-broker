@@ -5,19 +5,25 @@ config:
     client_secret: ""
     subject_key: sub
     roles_key: roles
-  internal_users: []
+  internal_users:
+    - username: api
+      password: $2b$10$nHYAzkxFXDZ8R.Nm2y5bVu/BIsr6So0IQPwn21P8NQW9OnKMAe9Wy
   acl:
     - name: device
       authorize_publish:
         - source/andrew-device/vehicles/+/devices/+/cmd/+
       authorize_subscribe:
         - source/andrew-api/vehicles/+/devices/+/cmd/+
+    - name: api
+      authorize_publish:
+        - source/andrew-api/vehicles/+/devices/+/cmd/+
+      authorize_subscribe: []
   kafka:
     publish:
       connect_event:
-        topic: andrew.devices.events
+        topic: andrew-device-metrics
       disconnect_event:
-        topic: andrew.devices.events
+        topic: andrew-device-metrics
       client_events:
         - mqtt_topic: source/andrew-device/vehicles/+/devices/+/cmd/+
-          topic: andrew.devices.events
+          topic: andrew-device-metrics
