@@ -11,7 +11,7 @@ const { hostname } = require("os");
 const { isAuthorizedMQTTTopic } = require("./lib/is-authorized-mqtt-topic");
 const bcrypt = require("bcrypt");
 const { v4: uuid } = require('uuid');
-const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent, AndrewDeviceEvent } = require('andrew-events-schema');
+const { AndrewDeviceConnectEvent, AndrewDeviceDisconnectEvent } = require('andrew-events-schema');
 
 const isProd = process.env.NODE_ENV === "production";
 if (!isProd) {
@@ -165,8 +165,8 @@ async function main() {
                 return callback(null, false);
             }
             bcrypt.compare(password.toString(), userMatch.password).then(function (check) {
-                console.log(check)
                 if (check) {
+                    client.internal_user = userMatch
                     return callback(null, true);
                 }
                 return callback(null, false);
@@ -174,9 +174,8 @@ async function main() {
         }
     };
 
-    function validatePublishAuthorization(topic, rolesKey, client, roles) {
-        const clientRoles = client.token[rolesKey] || null;
-        if (clientRoles) {
+    function validatePublishAuthorization(topic, clientRoles = [], roles) {
+        if (clientRoles?.length) {
             const clientRolesMapping = clientRoles.reduce((map, role) => {
                 map[role] = true;
                 return map;
@@ -204,8 +203,7 @@ async function main() {
         }
     }
 
-    function validateSubscribeAuthorization(topic, rolesKey, client, roles) {
-        const clientRoles = client.token[rolesKey];
+    function validateSubscribeAuthorization(topic, clientRoles = [], roles) {
         const clientRolesMapping = clientRoles.reduce((map, role) => {
             map[role] = true;
             return map;
@@ -225,12 +223,34 @@ async function main() {
 
     aedes.authorizePublish = (client, packet, callback) => {
         const topic = packet.topic;
-        if (client.token instanceof Object) {
+        if (client.token && client.token instanceof Object) {
             try {
+                const clientRoles = client.token[rolesKey] || [];
                 validatePublishAuthorization(
                     topic,
-                    config.config.openid.roles_key,
-                    client,
+                    clientRoles,
+                    config.config.acl
+                );
+                console.log(
+                    `client ${client.id} published new message to topic ${topic}`
+                );
+                return callback(null);
+            } catch (error) {
+                console.log(error.message);
+                return callback(error);
+            }
+        }
+
+        if (client.internal_user && client.internal_user instanceof Object) {
+            console.log(client.internal_user)
+            try {
+                // same role as username for an internal user the role muste exists in the acl
+                const clientRoles = [
+                    client.internal_user.username
+                ];
+                validatePublishAuthorization(
+                    topic,
+                    clientRoles,
                     config.config.acl
                 );
                 console.log(
@@ -249,12 +269,31 @@ async function main() {
     aedes.authorizeSubscribe = (client, subscription, callback) => {
         const topic = subscription.topic;
         // console.log(subscription);
-        if (client.token instanceof Object) {
+        if (client.token && client.token instanceof Object) {
             try {
+                const clientRoles = client.token[rolesKey] || [];
                 validateSubscribeAuthorization(
                     topic,
-                    config.config.openid.roles_key,
-                    client,
+                    clientRoles,
+                    config.config.acl
+                );
+                console.log(`client ${client.id} subscribed to topic ${topic}`);
+                return callback(null, subscription);
+            } catch (error) {
+                console.log(error.message);
+                return callback(error);
+            }
+        }
+
+        if (client.internal_user && client.internal_user instanceof Object) {
+            try {
+                // same role as username for an internal user the role muste exists in the acl
+                const clientRoles = [
+                    client.internal_user.username
+                ];
+                validateSubscribeAuthorization(
+                    topic,
+                    clientRoles,
                     config.config.acl
                 );
                 console.log(`client ${client.id} subscribed to topic ${topic}`);
