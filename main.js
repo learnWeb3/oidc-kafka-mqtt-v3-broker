@@ -126,15 +126,13 @@ async function main() {
                     ({ mqtt_topic }) => isAuthorizedMQTTTopic(mqtt_topic, packetTopic)
                 )?.topic || null;
             if (kafkaTopic) {
-                const data = JSON.parse(Buffer.from(payload).toString())
+                const data = Buffer.from(payload).toString()
                 // send payload to kafka
                 console.log('/////////////=======> data', data)
-                const metricEvent = new AndrewDeviceEvent(data.type, data.subject, data)
-                console.log(JSON.stringify(metricEvent, null, 4))
                 producer.send({
                     topic: kafkaTopic,
                     messages: [
-                        { key: data.subject, value: JSON.stringify(metricEvent) }
+                        { key: data.subject, value: data }
                     ],
                 })
             }
