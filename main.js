@@ -198,7 +198,7 @@ async function main() {
             throw new Error("Insufficient permissions to publish message");
         } else {
             throw new Error(
-                `Can't parse roles key, [HINT] roles must be a list evaluated from the ${rolesKey} claim of the access token, this key can be configured in the config.yaml file of the broker.`
+                `No roles evaluated the client seeems to not have any roles configured in matching config.yaml acls`
             );
         }
     }
@@ -225,6 +225,7 @@ async function main() {
         const topic = packet.topic;
         if (client.token && client.token instanceof Object) {
             try {
+                const rolesKey = config.config.openid.roles_key;
                 const clientRoles = client.token[rolesKey] || [];
                 validatePublishAuthorization(
                     topic,
@@ -271,6 +272,7 @@ async function main() {
         // console.log(subscription);
         if (client.token && client.token instanceof Object) {
             try {
+                const rolesKey = config.config.openid.roles_key;
                 const clientRoles = client.token[rolesKey] || [];
                 validateSubscribeAuthorization(
                     topic,
