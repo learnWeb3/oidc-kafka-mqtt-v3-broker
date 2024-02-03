@@ -17,7 +17,20 @@ config:
     - name: api
       authorize_publish:
         - source/andrew-api/vehicles/+/devices/+/cmd/+
+        - source/frontend/users/#
       authorize_subscribe: []
+    - name: user
+      authorize_publish: []
+      authorize_subscribe:
+        - source/frontend/users/:id/#
+    - name: supervisor
+      authorize_publish: []
+      authorize_subscribe:
+        - source/frontend/users/:id/#
+    - name: superadmin
+      authorize_publish: []
+      authorize_subscribe:
+        - source/frontend/users/:id/#
   kafka:
     publish:
       connect_event:
