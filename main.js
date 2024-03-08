@@ -225,6 +225,7 @@ async function main() {
             map[role] = true;
             return map;
         }, {});
+        console.log(clientRolesMapping);
         for (const { name, authorize_subscribe } of roles) {
             if (clientRolesMapping[name]) {
                 for (const authorizedTopicPattern of authorize_subscribe) {
