@@ -26,11 +26,12 @@ config:
     - name: supervisor
       authorize_publish: []
       authorize_subscribe:
-        - source/frontend/users/:id/#
+        - source/frontend/supervisor/#
     - name: superadmin
       authorize_publish: []
       authorize_subscribe:
-        - source/frontend/users/:id/#
+        - source/frontend/admin/#
+        - source/frontend/supervisor/#
   kafka:
     publish:
       connect_event:
